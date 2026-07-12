@@ -1,0 +1,33 @@
+# --- Stockage & base de données ---
+minio==7.2.7              # client pour parler à l'entrepôt MinIO (zone raw/staging)
+psycopg2-binary==2.9.9    # client pour parler à PostgreSQL (zone curated)
+sqlalchemy==2.0.30        # couche pratique par-dessus PostgreSQL
+
+# --- Manipulation de données ---
+numpy==1.26.4             # calcul numérique (la base de tout)
+pandas==2.2.2             # tableaux de données
+pyarrow==16.1.0           # pour lire/écrire le format Parquet (zone staging)
+
+# --- Traitement du signal ECG (étape 1) ---
+wfdb==4.1.2               # lire les fichiers PhysioNet (MIT-BIH)
+neurokit2==0.2.7          # extraire les features cardiaques
+scipy==1.13.1             # traitement du signal
+
+# --- Configuration ---
+python-dotenv==1.0.1          # charger les paramètres depuis le fichier .env
+requests==2.32.3          # appels HTTP vers l'API OpenAQ (source API)
+
+# --- Machine Learning (étape 1 : modèle de détection d'anomalies) ---
+scikit-learn==1.5.0       # modèles ML classiques (Random Forest, baseline...)
+
+# --- API Gateway (étape 4) ---
+fastapi==0.111.0          # framework web pour créer les endpoints
+uvicorn==0.30.1           # serveur qui fait tourner l'API
+
+# --- Traitement EEG (étape 3) ---
+mne==1.7.1                # la référence pour le traitement des signaux EEG
+
+# --- Dashboard (le moniteur visuel du data lake) ---
+streamlit==1.35.0         # interface web, écrite en Python pur
+plotly==5.22.0            # les graphiques interactifs
+httpx==0.27.0             # client HTTP utilisé par le benchmark

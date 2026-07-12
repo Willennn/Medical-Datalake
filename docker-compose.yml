@@ -1,0 +1,167 @@
+# docker-compose.yml
+# ==================================================================
+# Toute l'infrastructure du data lake, en une commande :
+#
+#   docker-compose up -d
+#
+# Services :
+#   1. minio             -> l'entrepot de fichiers (zones raw et staging)
+#   2. postgres          -> la base de donnees du LAKE (zone curated)
+#   3. airflow-postgres  -> la base interne d'AIRFLOW (son carnet de notes)
+#   4. airflow-init      -> prepare Airflow au 1er demarrage, puis s'arrete
+#   5. airflow-webserver -> l'interface web d'Airflow (http://localhost:8080)
+#   6. airflow-scheduler -> le "chef d'atelier" qui declenche les taches
+#
+# POURQUOI DEUX BASES POSTGRES ?
+# L'une stocke TES donnees (les battements analyses), l'autre stocke les notes
+# internes d'Airflow (quelle tache a tourne, quand, avec quel resultat). On les
+# separe pour ne pas melanger les donnees metier et la plomberie technique.
+# ==================================================================
+
+# Reglages communs aux services Airflow (evite de tout repeter 3 fois).
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.10.5-python3.11
+  environment: &airflow-env
+    # LocalExecutor : execute les taches sur la meme machine.
+    # (Plus leger que CeleryExecutor, qui exigerait Redis + des workers.)
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+
+    # Permet a Airflow de trouver notre code (le dossier src/).
+    PYTHONPATH: /opt/airflow/project
+
+    # IMPORTANT : depuis l'interieur d'un conteneur, "localhost" designe le
+    # conteneur lui-meme, PAS ta machine. Pour joindre MinIO et Postgres, il
+    # faut utiliser leurs NOMS DE SERVICE Docker.
+    MINIO_ENDPOINT: minio:9000
+    MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_USER: ${POSTGRES_USER:-datalake}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datalake}
+    POSTGRES_DB: ${POSTGRES_DB:-datalake}
+    BUCKET_RAW: ${BUCKET_RAW:-raw}
+    BUCKET_STAGING: ${BUCKET_STAGING:-staging}
+    OPENAQ_API_KEY: ${OPENAQ_API_KEY:-}
+
+    # Librairies Python installees dans les conteneurs Airflow au demarrage.
+    # ATTENTION : ne PAS ajouter sqlalchemy ici ! Airflow 2.10 impose
+    # SQLAlchemy 1.4 ; le surcharger avec la 2.x casse Airflow au demarrage
+    # (erreur ArgumentError sur TaskInstance.dag_model).
+    # psycopg2 en revanche est necessaire pour que notre code joigne la base
+    # curated, et il ne pose pas de conflit.
+    _PIP_ADDITIONAL_REQUIREMENTS: minio==7.2.7 wfdb==4.1.2 pandas==2.2.2 pyarrow==16.1.0 scikit-learn==1.5.0 joblib==1.4.2 requests==2.32.3 python-dotenv==1.0.1 psycopg2-binary==2.9.9 mne==1.7.1 scipy==1.13.1
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./src:/opt/airflow/project/src
+    - ./models:/opt/airflow/project/models
+  user: "50000:0"
+
+
+services:
+
+  # ---------- 1. L'entrepot de fichiers (zones raw & staging) ----------
+  minio:
+    image: minio/minio:latest
+    container_name: datalake-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # port API (le code Python parle ici)
+      - "9001:9001"   # port console web (toi, dans le navigateur)
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------- 2. La base du data lake (zone curated) ----------
+  postgres:
+    image: postgres:16
+    container_name: datalake-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-datalake}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datalake}
+      POSTGRES_DB: ${POSTGRES_DB:-datalake}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-datalake}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------- 3. La base interne d'Airflow ----------
+  airflow-postgres:
+    image: postgres:16
+    container_name: airflow-postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------- 4. L'initialisation d'Airflow (ne tourne qu'une fois) ----------
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create --username airflow --password airflow --firstname Data --lastname Lake --role Admin --email admin@datalake.local || true
+        echo "Airflow initialise. Identifiants : airflow / airflow"
+    restart: on-failure
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+
+  # ---------- 5. L'interface web d'Airflow ----------
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"   # http://localhost:8080
+    restart: unless-stopped
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  # ---------- 6. Le scheduler : le "chef d'atelier" ----------
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    restart: unless-stopped
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+
+volumes:
+  minio_data:
+  postgres_data:
+  airflow_db:

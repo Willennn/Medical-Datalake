@@ -1,0 +1,38 @@
+[2026-07-12T00:13:06.034+0000] {local_task_job_runner.py:123} INFO - ::group::Pre task execution logs
+[2026-07-12T00:13:06.076+0000] {taskinstance.py:2614} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: pipeline_ecg.transformation_staging manual__2026-07-12T00:12:33.410258+00:00 [queued]>
+[2026-07-12T00:13:06.094+0000] {taskinstance.py:2614} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: pipeline_ecg.transformation_staging manual__2026-07-12T00:12:33.410258+00:00 [queued]>
+[2026-07-12T00:13:06.096+0000] {taskinstance.py:2867} INFO - Starting attempt 1 of 3
+[2026-07-12T00:13:06.112+0000] {taskinstance.py:2890} INFO - Executing <Task(PythonOperator): transformation_staging> on 2026-07-12 00:12:33.410258+00:00
+[2026-07-12T00:13:06.122+0000] {standard_task_runner.py:72} INFO - Started process 252 to run task
+[2026-07-12T00:13:06.127+0000] {standard_task_runner.py:104} INFO - Running: ['***', 'tasks', 'run', 'pipeline_ecg', 'transformation_staging', 'manual__2026-07-12T00:12:33.410258+00:00', '--job-id', '13', '--raw', '--subdir', 'DAGS_FOLDER/dag_ecg.py', '--cfg-path', '/tmp/tmp0wb1lzwc']
+[2026-07-12T00:13:06.132+0000] {standard_task_runner.py:105} INFO - Job 13: Subtask transformation_staging
+[2026-07-12T00:13:06.225+0000] {task_command.py:467} INFO - Running <TaskInstance: pipeline_ecg.transformation_staging manual__2026-07-12T00:12:33.410258+00:00 [running]> on host 32319f5b03f4
+[2026-07-12T00:13:06.339+0000] {taskinstance.py:3134} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='datalake' AIRFLOW_CTX_DAG_ID='pipeline_ecg' AIRFLOW_CTX_TASK_ID='transformation_staging' AIRFLOW_CTX_EXECUTION_DATE='2026-07-12T00:12:33.410258+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2026-07-12T00:12:33.410258+00:00'
+[2026-07-12T00:13:06.341+0000] {taskinstance.py:732} INFO - ::endgroup::
+[2026-07-12T00:13:06.873+0000] {logging_mixin.py:190} INFO - [ecg] traitement de '100'...
+[2026-07-12T00:13:06.909+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/100.dat -> /tmp/tmpl0agu_wa/100.dat
+[2026-07-12T00:13:06.925+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/100.hea -> /tmp/tmpl0agu_wa/100.hea
+[2026-07-12T00:13:06.938+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/100.atr -> /tmp/tmpl0agu_wa/100.atr
+[2026-07-12T00:13:07.045+0000] {logging_mixin.py:190} INFO - [ecg] 2273 lignes de features extraites.
+[2026-07-12T00:13:07.407+0000] {logging_mixin.py:190} INFO - [MinIO] envoyé : /tmp/tmpk09z41l2/100.parquet -> staging/ecg/100.parquet
+[2026-07-12T00:13:07.409+0000] {logging_mixin.py:190} INFO - [staging] '100' : 2273 battements (34 anormaux) -> staging/ecg/100.parquet
+[2026-07-12T00:13:07.411+0000] {logging_mixin.py:190} INFO - [ecg] traitement de '101'...
+[2026-07-12T00:13:07.422+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/101.dat -> /tmp/tmp_3zv90bg/101.dat
+[2026-07-12T00:13:07.429+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/101.hea -> /tmp/tmp_3zv90bg/101.hea
+[2026-07-12T00:13:07.438+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/101.atr -> /tmp/tmp_3zv90bg/101.atr
+[2026-07-12T00:13:07.511+0000] {logging_mixin.py:190} INFO - [ecg] 1865 lignes de features extraites.
+[2026-07-12T00:13:07.531+0000] {logging_mixin.py:190} INFO - [MinIO] envoyé : /tmp/tmpk09z41l2/101.parquet -> staging/ecg/101.parquet
+[2026-07-12T00:13:07.533+0000] {logging_mixin.py:190} INFO - [staging] '101' : 1865 battements (5 anormaux) -> staging/ecg/101.parquet
+[2026-07-12T00:13:07.535+0000] {logging_mixin.py:190} INFO - [ecg] traitement de '102'...
+[2026-07-12T00:13:07.552+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/102.dat -> /tmp/tmpqmxowzao/102.dat
+[2026-07-12T00:13:07.560+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/102.hea -> /tmp/tmpqmxowzao/102.hea
+[2026-07-12T00:13:07.568+0000] {logging_mixin.py:190} INFO - [MinIO] récupéré : raw/ecg/102.atr -> /tmp/tmpqmxowzao/102.atr
+[2026-07-12T00:13:07.635+0000] {logging_mixin.py:190} INFO - [ecg] 2187 lignes de features extraites.
+[2026-07-12T00:13:07.656+0000] {logging_mixin.py:190} INFO - [MinIO] envoyé : /tmp/tmpk09z41l2/102.parquet -> staging/ecg/102.parquet
+[2026-07-12T00:13:07.658+0000] {logging_mixin.py:190} INFO - [staging] '102' : 2187 battements (2088 anormaux) -> staging/ecg/102.parquet
+[2026-07-12T00:13:07.660+0000] {logging_mixin.py:190} INFO - [staging] ✅ terminé. Les features sont prêtes pour l'étape modèle.
+[2026-07-12T00:13:07.661+0000] {python.py:240} INFO - Done. Returned value was: None
+[2026-07-12T00:13:07.676+0000] {taskinstance.py:341} INFO - ::group::Post task execution logs
+[2026-07-12T00:13:07.678+0000] {taskinstance.py:353} INFO - Marking task as SUCCESS. dag_id=pipeline_ecg, task_id=transformation_staging, run_id=manual__2026-07-12T00:12:33.410258+00:00, execution_date=20260712T001233, start_date=20260712T001306, end_date=20260712T001307
+[2026-07-12T00:13:07.747+0000] {local_task_job_runner.py:266} INFO - Task exited with return code 0
+[2026-07-12T00:13:07.767+0000] {local_task_job_runner.py:245} INFO - ::endgroup::

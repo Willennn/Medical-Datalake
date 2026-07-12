@@ -1,0 +1,56 @@
+[2026-07-12T00:58:11.949+0000] {local_task_job_runner.py:123} INFO - ::group::Pre task execution logs
+[2026-07-12T00:58:11.983+0000] {taskinstance.py:2614} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: pipeline_eeg.transformation_staging manual__2026-07-12T00:46:39.693359+00:00 [queued]>
+[2026-07-12T00:58:11.995+0000] {taskinstance.py:2614} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: pipeline_eeg.transformation_staging manual__2026-07-12T00:46:39.693359+00:00 [queued]>
+[2026-07-12T00:58:11.997+0000] {taskinstance.py:2867} INFO - Starting attempt 1 of 3
+[2026-07-12T00:58:12.013+0000] {taskinstance.py:2890} INFO - Executing <Task(PythonOperator): transformation_staging> on 2026-07-12 00:46:39.693359+00:00
+[2026-07-12T00:58:12.022+0000] {standard_task_runner.py:72} INFO - Started process 635 to run task
+[2026-07-12T00:58:12.026+0000] {standard_task_runner.py:104} INFO - Running: ['***', 'tasks', 'run', 'pipeline_eeg', 'transformation_staging', 'manual__2026-07-12T00:46:39.693359+00:00', '--job-id', '17', '--raw', '--subdir', 'DAGS_FOLDER/dag_eeg.py', '--cfg-path', '/tmp/tmpig2pdqcy']
+[2026-07-12T00:58:12.030+0000] {standard_task_runner.py:105} INFO - Job 17: Subtask transformation_staging
+[2026-07-12T00:58:12.102+0000] {task_command.py:467} INFO - Running <TaskInstance: pipeline_eeg.transformation_staging manual__2026-07-12T00:46:39.693359+00:00 [running]> on host c6e73bc200f8
+[2026-07-12T00:58:12.202+0000] {taskinstance.py:3134} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='datalake' AIRFLOW_CTX_DAG_ID='pipeline_eeg' AIRFLOW_CTX_TASK_ID='transformation_staging' AIRFLOW_CTX_EXECUTION_DATE='2026-07-12T00:46:39.693359+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2026-07-12T00:46:39.693359+00:00'
+[2026-07-12T00:58:12.204+0000] {taskinstance.py:732} INFO - ::endgroup::
+[2026-07-12T00:58:13.929+0000] {logging_mixin.py:190} INFO - 
+=======================================================
+[2026-07-12T00:58:13.931+0000] {logging_mixin.py:190} INFO - [eeg] traitement de 'chb01_03'...
+[2026-07-12T00:58:14.071+0000] {logging_mixin.py:190} INFO - [eeg] chb01_03 : 1 crise(s), 40 s au total.
+[2026-07-12T00:58:14.473+0000] {font_manager.py:1847} INFO - generated new fontManager
+[2026-07-12T00:58:17.121+0000] {logging_mixin.py:190} INFO - [eeg] 23 canaux, 3600 s de signal -> 720 fenêtres de 5 s.
+[2026-07-12T00:58:17.584+0000] {logging_mixin.py:190} INFO - [eeg] 720 fenêtres, dont 9 en crise (1.2 %) -> déséquilibre TRÈS marqué.
+[2026-07-12T00:58:17.586+0000] {logging_mixin.py:190} INFO - [eeg] 720 lignes de features extraites.
+[2026-07-12T00:58:17.657+0000] {logging_mixin.py:190} INFO - [MinIO] envoyé : /tmp/tmpperok5qv/chb01_03.parquet -> staging/eeg/chb01_03.parquet
+[2026-07-12T00:58:17.659+0000] {logging_mixin.py:190} INFO - [staging] 'chb01_03' -> staging/eeg/chb01_03.parquet
+[2026-07-12T00:58:17.660+0000] {logging_mixin.py:190} INFO - 
+=======================================================
+[2026-07-12T00:58:17.661+0000] {logging_mixin.py:190} INFO - [eeg] traitement de 'chb01_04'...
+[2026-07-12T00:58:17.735+0000] {logging_mixin.py:190} INFO - [eeg] chb01_04 : 1 crise(s), 27 s au total.
+[2026-07-12T00:58:19.185+0000] {logging_mixin.py:190} INFO - [eeg] 23 canaux, 3600 s de signal -> 720 fenêtres de 5 s.
+[2026-07-12T00:58:20.045+0000] {logging_mixin.py:190} INFO - [eeg] 720 fenêtres, dont 6 en crise (0.8 %) -> déséquilibre TRÈS marqué.
+[2026-07-12T00:58:20.048+0000] {logging_mixin.py:190} INFO - [eeg] 720 lignes de features extraites.
+[2026-07-12T00:58:20.073+0000] {logging_mixin.py:190} INFO - [MinIO] envoyé : /tmp/tmpperok5qv/chb01_04.parquet -> staging/eeg/chb01_04.parquet
+[2026-07-12T00:58:20.074+0000] {logging_mixin.py:190} INFO - [staging] 'chb01_04' -> staging/eeg/chb01_04.parquet
+[2026-07-12T00:58:20.076+0000] {logging_mixin.py:190} INFO - 
+=======================================================
+[2026-07-12T00:58:20.077+0000] {logging_mixin.py:190} INFO - [eeg] traitement de 'chb01_16'...
+[2026-07-12T00:58:20.162+0000] {logging_mixin.py:190} INFO - [eeg] chb01_16 : 1 crise(s), 51 s au total.
+[2026-07-12T00:58:21.358+0000] {logging_mixin.py:190} INFO - [eeg] 23 canaux, 3600 s de signal -> 720 fenêtres de 5 s.
+[2026-07-12T00:58:21.816+0000] {logging_mixin.py:190} INFO - [eeg] 720 fenêtres, dont 11 en crise (1.5 %) -> déséquilibre TRÈS marqué.
+[2026-07-12T00:58:21.820+0000] {logging_mixin.py:190} INFO - [eeg] 720 lignes de features extraites.
+[2026-07-12T00:58:21.845+0000] {logging_mixin.py:190} INFO - [MinIO] envoyé : /tmp/tmpperok5qv/chb01_16.parquet -> staging/eeg/chb01_16.parquet
+[2026-07-12T00:58:21.847+0000] {logging_mixin.py:190} INFO - [staging] 'chb01_16' -> staging/eeg/chb01_16.parquet
+[2026-07-12T00:58:21.848+0000] {logging_mixin.py:190} INFO - 
+=======================================================
+[2026-07-12T00:58:21.850+0000] {logging_mixin.py:190} INFO - [eeg] traitement de 'chb01_18'...
+[2026-07-12T00:58:21.941+0000] {logging_mixin.py:190} INFO - [eeg] chb01_18 : 1 crise(s), 90 s au total.
+[2026-07-12T00:58:22.812+0000] {logging_mixin.py:190} INFO - [eeg] 23 canaux, 3600 s de signal -> 720 fenêtres de 5 s.
+[2026-07-12T00:58:23.241+0000] {logging_mixin.py:190} INFO - [eeg] 720 fenêtres, dont 18 en crise (2.5 %) -> déséquilibre TRÈS marqué.
+[2026-07-12T00:58:23.243+0000] {logging_mixin.py:190} INFO - [eeg] 720 lignes de features extraites.
+[2026-07-12T00:58:23.263+0000] {logging_mixin.py:190} INFO - [MinIO] envoyé : /tmp/tmpperok5qv/chb01_18.parquet -> staging/eeg/chb01_18.parquet
+[2026-07-12T00:58:23.265+0000] {logging_mixin.py:190} INFO - [staging] 'chb01_18' -> staging/eeg/chb01_18.parquet
+[2026-07-12T00:58:23.266+0000] {logging_mixin.py:190} INFO - 
+[staging] ✅ terminé. Les features EEG sont prêtes.
+[2026-07-12T00:58:23.267+0000] {python.py:240} INFO - Done. Returned value was: None
+[2026-07-12T00:58:23.280+0000] {taskinstance.py:341} INFO - ::group::Post task execution logs
+[2026-07-12T00:58:23.282+0000] {taskinstance.py:353} INFO - Marking task as SUCCESS. dag_id=pipeline_eeg, task_id=transformation_staging, run_id=manual__2026-07-12T00:46:39.693359+00:00, execution_date=20260712T004639, start_date=20260712T005811, end_date=20260712T005823
+[2026-07-12T00:58:23.343+0000] {local_task_job_runner.py:266} INFO - Task exited with return code 0
+[2026-07-12T00:58:23.365+0000] {taskinstance.py:3901} INFO - 1 downstream tasks scheduled from follow-on schedule check
+[2026-07-12T00:58:23.369+0000] {local_task_job_runner.py:245} INFO - ::endgroup::

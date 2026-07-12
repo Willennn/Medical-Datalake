@@ -1,0 +1,13 @@
+# Force le thème CLAIR pour le dashboard.
+# Sans ça, si l'utilisateur a Streamlit en thème sombre, notre texte foncé
+# devient invisible sur fond noir (bug rencontré en vrai).
+[theme]
+base = "light"
+primaryColor = "#C1121F"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F3F7"
+textColor = "#14213D"
+font = "sans serif"
+
+[server]
+headless = true

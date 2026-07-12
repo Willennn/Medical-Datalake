@@ -1,0 +1,21 @@
+# Secrets (mots de passe) — ne JAMAIS mettre sur GitHub
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Données téléchargées (trop lourdes pour Git)
+data/
+*.dat
+*.hea
+*.edf
+*.parquet
+
+# Système
+.DS_Store
+.idea/
+.vscode/
