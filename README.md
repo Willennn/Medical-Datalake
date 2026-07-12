@@ -331,15 +331,6 @@ Entraînez d'abord le modèle : `python -m src.models.train_ecg`, puis
 
 ---
 
-## 📚 Pour aller plus loin
-
-| Document | Contenu |
-|---|---|
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Le **pourquoi** de chaque choix technique |
-| [`GUIDE.md`](./GUIDE.md) | À quoi sert **chaque fichier**, expliqué simplement |
-| [`SPECS.md`](./SPECS.md) | La feuille de route et son avancement |
-
----
 
 ## 🎓 Ce que ce projet nous a appris
 
