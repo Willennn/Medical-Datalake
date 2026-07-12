@@ -90,7 +90,7 @@ python -m src.models.train_ecg          # entraîne le modèle   → zone curate
 python -m src.ingestion.ingest_air      # interroge OpenAQ     → zone raw
 python -m src.pipelines.run_air         # aplatit le JSON      → zone staging
 
-# --- Domaine EEG (⏳ ~170 Mo à télécharger, comptez 20-30 min) ---
+# --- Domaine EEG (⏳ ~170 Mo à télécharger) ---
 python -m src.ingestion.ingest_eeg      # télécharge CHB-MIT   → zone raw
 python -m src.pipelines.run_eeg         # bandes de fréquence  → zone staging
 python -m src.models.train_eeg          # détecteur de crises  → zone curated
