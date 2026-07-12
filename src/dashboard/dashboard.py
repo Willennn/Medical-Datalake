@@ -22,6 +22,9 @@ Pour le lancer (l'API doit tourner en parallèle) :
     Terminal 2 :  streamlit run src/dashboard/dashboard.py
 """
 
+import json
+from pathlib import Path
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -29,6 +32,11 @@ import requests
 import streamlit as st
 
 API_URL = "http://localhost:8000"
+
+# Dossier contenant l'instantané des données, utilisé quand l'API est
+# injoignable (typiquement : le dashboard déployé sur Streamlit Cloud, qui ne
+# peut évidemment pas joindre le « localhost » de notre machine).
+DOSSIER_DEMO = Path(__file__).resolve().parents[2] / "demo_data"
 
 # Palette : sobre, clinique. Un seul rouge, réservé à ce qui alerte.
 ENCRE = "#14213D"
@@ -90,25 +98,59 @@ st.markdown(f"""
 # Accès à l'API
 # ----------------------------------------------------------------------
 @st.cache_data(ttl=30)
+def api_disponible() -> bool:
+    """L'API répond-elle ? Détermine si nous sommes en direct ou en mode démo."""
+    try:
+        requests.get(f"{API_URL}/health", timeout=5).raise_for_status()
+        return True
+    except Exception:
+        return False
+
+
+@st.cache_data(ttl=30)
 def api_get(chemin: str, params: dict | None = None):
+    """
+    Interroge l'API Gateway.
+
+    Si l'API ne répond pas (cas du dashboard déployé en ligne), bascule
+    automatiquement sur l'instantané figé dans demo_data/.
+    """
     try:
         r = requests.get(f"{API_URL}{chemin}", params=params, timeout=30)
         r.raise_for_status()
         return r.json()
     except Exception:
-        return None
+        pass  # on passe en mode démo
+
+    # --- MODE DÉMO ---
+    if chemin == "/health":
+        return {"status": "demo",
+                "services": {"minio": "démo", "postgresql": "démo"}}
+
+    if chemin == "/stats":
+        fichier = DOSSIER_DEMO / "stats.json"
+        if fichier.exists():
+            return json.loads(fichier.read_text(encoding="utf-8"))
+
+    return None
 
 
 @st.cache_data(ttl=30)
 def charger_domaine(source: str) -> pd.DataFrame:
     """
-    Récupère TOUTES les lignes d'un domaine, page par page.
+    Récupère TOUTES les lignes d'un domaine.
 
     ⚠️ Pourquoi paginer ? L'API plafonne à 1000 lignes par appel (une sécurité
     pour ne pas saturer le réseau). Sans pagination, nous ne recevions que les
     1000 premières lignes — soit un seul patient ! C'était un vrai bug : les
     autres patients semblaient ne pas exister.
+
+    Si l'API est injoignable, on lit l'instantané de demo_data/.
     """
+    if not api_disponible():
+        fichier = DOSSIER_DEMO / f"curated_{source}.parquet"
+        return pd.read_parquet(fichier) if fichier.exists() else pd.DataFrame()
+
     morceaux, offset = [], 0
     while True:
         rep = api_get("/curated", {"source": source, "limit": 1000, "offset": offset})
@@ -160,23 +202,29 @@ with st.sidebar:
     st.caption("Cours Data Lakes & Data Integration")
     page = st.radio("Navigation", [
         "1 · Notre projet", "2 · L'architecture", "3 · Le lake en direct",
-        "4 · Cœur (ECG)", "5 · Cerveau (EEG)", "6 · Ce que nous retenons",
+        "4 · Cœur (ECG)", "5 · Cerveau (EEG)", "6 · Air (API temps réel)",
+        "7 · Ce que nous retenons",
     ], label_visibility="collapsed")
 
     st.divider()
     st.markdown("**État des services**")
-    st.caption("Interrogé en direct sur `/health`.")
 
-    sante = api_get("/health")
-    if sante:
+    if api_disponible():
+        sante = api_get("/health")
         s = sante.get("services", {})
         vivant = sante.get("status") == "healthy"
+        st.caption("Interrogé en direct sur `/health`.")
         st.markdown(f"### {'🟢' if vivant else '🟠'} {'Tout répond' if vivant else 'Dégradé'}")
         st.caption(f"Entrepôt de fichiers (MinIO) · **{s.get('minio', '?')}**")
         st.caption(f"Base de données (PostgreSQL) · **{s.get('postgresql', '?')}**")
     else:
-        st.markdown("### 🔴 API hors ligne")
-        st.caption("Lancez : `uvicorn src.api.main:app`")
+        st.markdown("### 🔵 Mode démonstration")
+        st.caption(
+            "L'infrastructure (MinIO, PostgreSQL, Airflow) tourne en local via "
+            "Docker et n'est pas joignable depuis un serveur distant. Ce "
+            "dashboard affiche donc un **instantané figé** des résultats.\n\n"
+            "Pour la version en direct, clonez le dépôt et suivez le README."
+        )
 
 
 # ======================================================================
@@ -357,7 +405,10 @@ elif page.startswith("3"):
 
     stats = api_get("/stats")
     if not stats:
-        st.error("**L'API ne répond pas.** Lancez : `uvicorn src.api.main:app`")
+        st.error(
+            "Aucune donnée disponible. Lancez l'API (`uvicorn src.api.main:app`), "
+            "ou générez l'instantané de démo (`python -m src.dashboard.export_demo`)."
+        )
         st.stop()
 
     raw = stats.get("buckets", {}).get("raw", {})
@@ -759,7 +810,126 @@ que voit notre modèle.
 
 
 # ======================================================================
-# PAGE 6 — CE QUE NOUS RETENONS
+# PAGE 6 — LA SOURCE API : QUALITÉ DE L'AIR
+# ======================================================================
+elif page.startswith("6"):
+    st.title("La troisième source : la qualité de l'air")
+
+    note(
+        "Le sujet impose deux sources : un dataset fichier et une source issue "
+        "d'une API. Nous avons choisi <strong>OpenAQ</strong>, qui expose en temps "
+        "réel les mesures de pollution relevées par les stations du monde entier. "
+        "Nous interrogeons celles situées dans un rayon de 25 km autour de Paris."
+    )
+
+    note(
+        "<strong>Pourquoi cette source, et pas une autre ?</strong><br><br>"
+        "D'abord pour la cohérence : la pollution de l'air est un "
+        "<strong>facteur de risque cardio-respiratoire reconnu</strong>. Elle "
+        "complète naturellement des signaux cardiaques et cérébraux.<br><br>"
+        "Ensuite — et surtout — parce qu'elle est <strong>radicalement différente</strong> "
+        "des deux autres. L'ECG et l'EEG sont des fichiers binaires, statiques, "
+        "téléchargés une fois. OpenAQ renvoie du JSON imbriqué, géolocalisé, qui "
+        "change en permanence. C'est le vrai test de notre architecture."
+    )
+
+    with st.expander("Ce que le pipeline fait de ce flux"):
+        st.markdown("""
+**Zone raw** — Nous stockons la réponse JSON **telle quelle**, dans un fichier
+horodaté. Chaque exécution crée un *nouvel* instantané sans écraser les précédents :
+nous construisons ainsi un **historique** de la qualité de l'air.
+
+**Zone staging** — Le JSON d'OpenAQ est imbriqué en poupées russes : chaque station
+contient une liste de capteurs, chacun mesurant un polluant. Notre `AirQualityProcessor`
+**l'aplatit** en un tableau — une ligne = un capteur, d'un polluant, à un endroit.
+
+**Zone curated** — Les mesures sont rangées en base, interrogeables par l'API.
+
+**Orchestration** — Contrairement aux DAGs ECG et EEG (déclenchés à la main, car les
+datasets sont statiques), celui-ci est **planifié toutes les heures**. C'est le seul
+qui exploite réellement le scheduling d'Airflow.
+        """)
+
+    stats = api_get("/stats")
+    air = (stats or {}).get("air", {})
+
+    if not air or air.get("n_rows", 0) == 0:
+        st.info(
+            "Aucune donnée de qualité de l'air. Lancez :\n\n"
+            "`python -m src.ingestion.ingest_air`\n\n"
+            "`python -m src.pipelines.run_air`"
+        )
+        st.stop()
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Mesures en base", air.get("n_rows", 0))
+    c2.metric("Instantanés", air.get("n_snapshots", 0), "un par exécution")
+    c3.metric("Stations", air.get("n_stations", 0), "autour de Paris")
+    c4.metric("Polluants suivis", air.get("n_polluants", 0))
+
+    reponse = api_get("/curated", {"source": "air", "limit": 1000})
+    if not reponse or not reponse.get("donnees"):
+        st.warning("L'API ne renvoie aucune mesure. Redémarrez-la après mise à jour.")
+        st.stop()
+
+    df = pd.DataFrame(reponse["donnees"])
+
+    st.subheader("Que mesure-t-on, et combien de fois ?")
+    st.caption("Chaque station ne mesure pas les mêmes polluants — le réseau est hétérogène.")
+
+    comptes = df["parametre"].value_counts().reset_index()
+    comptes.columns = ["Polluant", "Nombre de capteurs"]
+
+    fig = px.bar(comptes, x="Polluant", y="Nombre de capteurs",
+                 text="Nombre de capteurs", color_discrete_sequence=[ENCRE])
+    fig.update_traces(textposition="outside", textfont=dict(color=ENCRE, size=13),
+                      cliponaxis=False)
+    fig.update_yaxes(range=[0, comptes["Nombre de capteurs"].max() * 1.2])
+    st.plotly_chart(styler(fig, 340), use_container_width=True)
+
+    note(
+        "Ce graphe dit quelque chose d'important sur les données ouvertes : "
+        "<strong>le réseau est très inégal</strong>. Certains polluants sont mesurés "
+        "par de nombreuses stations, d'autres par une poignée. Une analyse sérieuse "
+        "devrait en tenir compte plutôt que de traiter toutes les mesures sur un pied "
+        "d'égalité."
+    )
+
+    if {"latitude", "longitude"}.issubset(df.columns):
+        st.subheader("Où sont les stations ?")
+        st.caption("Les capteurs OpenAQ situés dans un rayon de 25 km autour de Paris.")
+
+        stations = df.dropna(subset=["latitude", "longitude"]).drop_duplicates("location_id")
+        st.map(stations[["latitude", "longitude"]], size=120, color="#C1121F")
+
+        note(
+            f"<strong>{len(stations)} stations</strong> alimentent notre lake. Ce sont "
+            "des données <em>spatiales</em> — une nature encore différente des séries "
+            "temporelles de l'ECG et de l'EEG. Notre chaîne les a absorbées sans "
+            "modification."
+        )
+
+    st.subheader("Les mesures brutes")
+    apercu = df[["snapshot_id", "location_name", "parametre", "unite"]].head(20)
+    apercu.columns = ["Instantané", "Station", "Polluant", "Unité"]
+    st.dataframe(apercu, use_container_width=True, hide_index=True)
+
+    alerte(
+        "<strong>Ce que nous n'avons pas fait, et que nous assumons.</strong><br><br>"
+        "Nous ingérons la qualité de l'air, nous la transformons, nous la stockons — "
+        "mais nous ne l'avons <strong>pas encore croisée</strong> avec les signaux "
+        "physiologiques. La question intéressante (la pollution influence-t-elle les "
+        "mesures cardiaques ?) reste entière.<br><br>"
+        "Pourquoi ? Parce que nos données ECG proviennent d'un hôpital de Boston dans "
+        "les années 1980, et nos mesures d'air de Paris en 2026. <strong>Les croiser "
+        "n'aurait aucun sens scientifique</strong>, et nous avons préféré ne pas "
+        "fabriquer une corrélation artificielle pour faire joli. L'infrastructure est "
+        "prête pour cette analyse ; il faudrait des données appariées pour la mener."
+    )
+
+
+# ======================================================================
+# PAGE 7 — CE QUE NOUS RETENONS
 # ======================================================================
 else:
     st.title("Ce que nous retenons")

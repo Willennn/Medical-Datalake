@@ -162,10 +162,119 @@ def count_rows() -> int:
         return int(result.scalar())
 
 
+# ----------------------------------------------------------------------
+# La zone CURATED de la source API (qualité de l'air)
+# ----------------------------------------------------------------------
+# ⚠️ POURQUOI UNE TABLE SÉPARÉE ?
+# Les signaux physiologiques (ECG/EEG) et les mesures de pollution n'ont
+# strictement rien en commun : l'un décrit un patient dans le temps, l'autre
+# des capteurs dans l'espace. Les entasser dans la même table aurait produit un
+# schéma illisible, aux trois quarts vide.
+#
+# Un data lake n'oblige pas à tout mettre au même endroit : il oblige à ce que
+# TOUT passe par la même chaîne. C'est le cas ici — même ingestion, même
+# processeur enfichable, même orchestrateur, même API.
+TABLE_AIR = "curated_air"
+
+CREATE_TABLE_AIR_SQL = f"""
+CREATE TABLE IF NOT EXISTS {TABLE_AIR} (
+    id            SERIAL PRIMARY KEY,
+    snapshot_id   TEXT,               -- l'instantané d'où vient la mesure
+    location_id   INTEGER,            -- identifiant de la station
+    location_name TEXT,               -- son nom
+    latitude      DOUBLE PRECISION,
+    longitude     DOUBLE PRECISION,
+    sensor_id     INTEGER,
+    parametre     TEXT,               -- le polluant mesuré (pm25, no2, o3...)
+    unite         TEXT,
+    fetched_at    TIMESTAMP,          -- quand l'API a été interrogée
+    ingested_at   TIMESTAMP DEFAULT NOW()
+);
+"""
+
+
+def ensure_air_table() -> None:
+    """Crée la table de la qualité de l'air si elle n'existe pas."""
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text(CREATE_TABLE_AIR_SQL))
+    print(f"[postgres] table '{TABLE_AIR}' : prête.")
+
+
+def clear_air(snapshot_id: str | None = None) -> None:
+    """Efface les mesures (d'un instantané, ou toutes) — pour l'idempotence."""
+    engine = get_engine()
+    with engine.begin() as conn:
+        if snapshot_id:
+            conn.execute(text(f"DELETE FROM {TABLE_AIR} WHERE snapshot_id = :s"),
+                         {"s": snapshot_id})
+        else:
+            conn.execute(text(f"DELETE FROM {TABLE_AIR}"))
+
+
+def insert_air(df: pd.DataFrame) -> int:
+    """Insère les mesures de qualité de l'air en zone curated."""
+    cols = ["snapshot_id", "location_id", "location_name", "latitude",
+            "longitude", "sensor_id", "parametre", "unite", "fetched_at"]
+    presentes = [c for c in cols if c in df.columns]
+    if not presentes:
+        return 0
+
+    rows = df[presentes].astype(object).where(
+        pd.notnull(df[presentes]), None).to_dict("records")
+    if not rows:
+        return 0
+
+    sql = text(
+        f"INSERT INTO {TABLE_AIR} ({', '.join(presentes)}) "
+        f"VALUES ({', '.join(f':{c}' for c in presentes)})"
+    )
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(sql, rows)
+    return len(rows)
+
+
+def fetch_air(limit: int = 500) -> list[dict]:
+    """Récupère les mesures de qualité de l'air. Utilisé par GET /curated?source=air."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        exists = conn.execute(text("SELECT to_regclass(:t)"),
+                              {"t": TABLE_AIR}).scalar()
+        if exists is None:
+            return []
+        result = conn.execute(text(f"""
+            SELECT snapshot_id, location_id, location_name, latitude, longitude,
+                   sensor_id, parametre, unite, fetched_at
+            FROM {TABLE_AIR}
+            ORDER BY fetched_at DESC, location_id
+            LIMIT :limit
+        """), {"limit": limit})
+        return [dict(r._mapping) for r in result]
+
+
+def stats_air() -> dict:
+    """Statistiques de la source API, pour GET /stats."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        exists = conn.execute(text("SELECT to_regclass(:t)"),
+                              {"t": TABLE_AIR}).scalar()
+        if exists is None:
+            return {"n_rows": 0}
+        r = conn.execute(text(f"""
+            SELECT COUNT(*)                        AS n_rows,
+                   COUNT(DISTINCT snapshot_id)     AS n_snapshots,
+                   COUNT(DISTINCT location_id)     AS n_stations,
+                   COUNT(DISTINCT parametre)       AS n_polluants
+            FROM {TABLE_AIR}
+        """)).fetchone()
+        return dict(r._mapping)
+
+
 def fetch_rows(source_type: str | None = None, record_id: str | None = None,
                limit: int = 100, offset: int = 0) -> list[dict]:
     """
-    Récupère des lignes de la table curated, avec filtres optionnels.
+    Récupère des lignes de la table curated (signaux physiologiques).
     Utilisé par l'endpoint GET /curated de l'API.
     """
     clauses, params = [], {"limit": limit, "offset": offset}

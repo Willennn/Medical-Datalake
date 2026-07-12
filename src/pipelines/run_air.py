@@ -17,6 +17,7 @@ from pathlib import Path
 
 from src.config import config
 from src.storage.minio_client import list_objects, upload_file
+from src.storage import postgres_client as pg
 from src.processors.air import AirQualityProcessor
 
 
@@ -74,9 +75,20 @@ def run(tous: bool = True) -> None:
             object_name = f"air/{record_id}.parquet"
             upload_file(config.BUCKET_STAGING, object_name, str(local_parquet))
             print(f"[staging] '{record_id}' : {len(features)} lignes -> "
-                  f"{config.BUCKET_STAGING}/{object_name}\n")
+                  f"{config.BUCKET_STAGING}/{object_name}")
 
-    print("[staging] ✅ terminé.")
+            # --- ZONE CURATED ---
+            # On range aussi les mesures en base, pour qu'elles soient
+            # interrogeables par l'API (et visibles dans le dashboard).
+            # clear_air(record_id) garantit l'idempotence : relancer le pipeline
+            # ne crée pas de doublons.
+            features["snapshot_id"] = record_id
+            pg.ensure_air_table()
+            pg.clear_air(record_id)
+            n = pg.insert_air(features)
+            print(f"[curated] '{record_id}' : {n} mesures écrites en base.\n")
+
+    print("[staging] ✅ terminé. Les mesures sont en staging ET en curated.")
 
 
 if __name__ == "__main__":

@@ -157,9 +157,14 @@ def get_curated(
       /curated?source=ecg&record_id=102
     """
     try:
-        lignes = pg.fetch_rows(
-            source_type=source, record_id=record_id, limit=limit, offset=offset
-        )
+        # La qualité de l'air vit dans sa propre table (schéma très différent
+        # des signaux physiologiques). On aiguille donc vers la bonne requête.
+        if source == "air":
+            lignes = pg.fetch_air(limit=limit)
+        else:
+            lignes = pg.fetch_rows(
+                source_type=source, record_id=record_id, limit=limit, offset=offset
+            )
     except Exception as err:
         raise HTTPException(
             status_code=503,
@@ -204,4 +209,10 @@ def get_stats():
     except Exception as err:
         curated = {"erreur": f"PostgreSQL injoignable : {err}"}
 
-    return {"buckets": buckets, "curated": curated}
+    # --- La source API (qualité de l'air), dans sa propre table ---
+    try:
+        air = pg.stats_air()
+    except Exception as err:
+        air = {"erreur": f"PostgreSQL injoignable : {err}"}
+
+    return {"buckets": buckets, "curated": curated, "air": air}

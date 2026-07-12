@@ -15,7 +15,22 @@ data/
 *.edf
 *.parquet
 
+# ...MAIS on versionne l'instantané de démo : c'est lui qui alimente le
+# dashboard déployé en ligne, où l'API locale n'est pas joignable.
+!demo_data/*.parquet
+
+# Modèles entraînés (régénérables) et logs Airflow
+models/*.joblib
+logs/
+!logs/.gitkeep
+
 # Système
 .DS_Store
 .idea/
 .vscode/
+
+# Artéfacts de génération du rapport
+rapport/node_modules/
+rapport/page-*.jpg
+rapport/*.pdf
+rapport/package*.json
